@@ -7,7 +7,8 @@ const manifest = {
     register: {
         plugins: [
             './config/blockchain',
-            './modules/blockchain/routes'
+            './modules/blockchain/routes',
+            './modules/validations/routes'
         ]
     }
 }

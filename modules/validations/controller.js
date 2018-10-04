@@ -1,24 +1,23 @@
+'use strict';
+
+const Validation = require('./model');
 
 /**
  * Post a new block to the chain
  */
 exports.post = (req, h) => {
 
-
-    return req.server.app.validations.addRequest(req.payload)
+    return Validation.addRequest(req.payload.address)
     .then((validationRequest) => {
 
-
-        return h.response(JSON.parse(validationRequest)).code(201);
-
+        return h.response(validationRequest).code(201);
 
     })
     .catch((err) => {
 
-
+        console.log(err);
         let data =  { err: err };
         return h.response(data).code(400);
-
 
     });
 

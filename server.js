@@ -1,27 +1,19 @@
 'use strict';
 
+const Glue = require('glue');
+const Manifest = require('./config/manifest');
 
-const Hapi=require('hapi');
-
-
-//Create the server on port 8000
-const server=Hapi.server({
-    host:'localhost',
-    port:8000
-});
-
-const start = async() => {
+const start = async () => {
 
     try {
-        await server.register([require('./config/blockchain'), require('./modules/blockchain/routes')]);
+        const server = await Glue.compose(Manifest, { relativeTo: __dirname });
         await server.start();
+        console.log(`Server running at: ${server.info.uri}`);
     }
     catch (err) {
         console.log(err);
         process.exit(1);
     }
-
-    console.log(`Server running at: ${server.info.uri}`);
 };
 
 start();

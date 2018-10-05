@@ -1,5 +1,7 @@
 'use strict';
 
+const Joi = require('joi');
+
 const BlockController = require('./controller');
 
 const blockchainRoutes = {
@@ -9,12 +11,26 @@ const blockchainRoutes = {
             {
                 method:'GET',
                 path:'/block/{height}',
-                handler:BlockController.get
+                handler:BlockController.getBlock
             },
             {
                 method:'POST',
                 path:'/block',
-                handler:BlockController.post
+                handler:BlockController.postBlock,
+                options: {
+                    validate: {
+                        payload: {
+                            address: Joi.string().min(26).max(35).required(),
+                            star: {
+                                ra: Joi.string().required(),
+                                dec: Joi.string().required(),
+                                mag: Joi.string(),
+                                cen: Joi.string(),
+                                story: Joi.string().max(500)
+                            }
+                        }
+                    }
+                }
             }
         ]);
     }   

@@ -1,5 +1,7 @@
 'use strict';
 
+const bitcoinMessage = require('bitcoinjs-message');
+
 /**
  * Interacting with the database
  */
@@ -23,22 +25,22 @@ function addLevelDBData(db, key, value) {
 function addDataToLevelDB(db, value) {
 	return new Promise((resolve, reject) => {
 		let i = 0;
-	  db.createReadStream()
+	    db.createReadStream()
 		.on('data', function(data) {
-	  	i++;
-	   })
-		 .on('error', function(err) {
-			 reject(err);
-	   })
-		 .on('close', function() {
+	  	    i++;
+	    })
+		.on('error', function(err) {
+			reject(err);
+	    })
+		.on('close', function() {
 	   		addLevelDBData(i, value)
-				.then((key) => {
-					resolve(key);
-				})
-				.catch((error) => {
-					reject(error);
-				});
-	   });
+            .then((key) => {
+                resolve(key);
+            })
+            .catch((error) => {
+                reject(error);
+            });
+	    });
 	});
 }
 
@@ -54,6 +56,19 @@ function getLevelDBData(db, key) {
     });
 }
 
+function delLevelDBData(db, key) {
+    return new Promise((resolve, reject) => {
+        db.del(key, function(err) {
+            if (err) {
+                reject(err);
+            } 
+            else {
+                resolve();
+            }
+        });
+    });
+}
+
 /**
  * Validation class
  */
@@ -63,6 +78,14 @@ class ValidationRequest {
         this.requestTimestamp = new Date().getTime().toString().slice(0,-3),
         this.message = this.address + ':' + this.requestTimestamp + ':' + 'starRegistry',
         this.validationWindow = 300
+    }
+}
+
+class ValidatedRequest {
+    constructor(validationRequest) {
+        this.registerStar = true,
+        this.status = validationRequest,
+        this.status.messageSignature = 'valid'
     }
 }
 
@@ -87,6 +110,13 @@ class Validation {
             .then((value) => {
                 //check if it has been more than 300 seconds
                 let validationRequest = JSON.parse(value);
+                if ('status' in validationRequest) {
+                    reject('A validated message is active for this address. Please register a star.')
+                    return;
+                }
+                return validationRequest;
+            })
+            .then((validationRequest) => {
                 let requestTimestamp = parseInt(validationRequest.requestTimestamp);
                 if (new Date() - new Date(requestTimestamp * 1000) > 300000) {
                     //create new request and add it in place of old one
@@ -108,6 +138,52 @@ class Validation {
                     reject(err);
                 }
             });
+        });
+    }
+
+    validateRequest(address, signature) {
+        return new Promise((resolve, reject) => {
+            this.checkAddress(address)
+            .then((value) => {
+                let validationRequest = JSON.parse(value);
+                if ('status' in validationRequest) {
+                    validationRequest.message = 'A request has already been validated. Please register a star.';
+                    let requestTimestamp = parseInt(validationRequest.status.requestTimestamp);
+                    validationRequest.status.validationWindow = Math.round(300 - (new Date() - new Date(requestTimestamp * 1000)) / 1000);
+                    resolve(validationRequest);
+                    return;
+                } 
+                return validationRequest;
+            })
+            .then((validationRequest) => {
+                let requestTimestamp = parseInt(validationRequest.requestTimestamp);
+                if (new Date() - new Date(requestTimestamp * 1000) > 300000) {
+                    reject('This request has expired. Please request a new validation message.');
+                    return;
+                }
+                return validationRequest;
+            })
+            .then((validationRequest) => {
+                let verified = bitcoinMessage.verify(validationRequest.message, address, signature);
+                if (!verified) {
+                    reject(`Incorrect signature for message: ${validationRequest.message}`);
+                    return;
+                }
+                return new ValidatedRequest(validationRequest);
+            })
+            .then((validatedRequest) => {
+                let requestTimestamp = parseInt(validatedRequest.status.requestTimestamp);
+                validatedRequest.status.validationWindow = Math.round(300 - (new Date() - new Date(requestTimestamp * 1000)) / 1000);
+                addLevelDBData(db, address, JSON.stringify(validatedRequest).toString());
+                resolve(validatedRequest);
+            })
+            .catch((err) => {
+                if (err.name === 'NotFoundError') {
+                    reject('A validation request was not found for this address.')
+                } else {
+                    reject(err);
+                }
+            })
         });
     }
 }

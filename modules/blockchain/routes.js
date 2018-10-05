@@ -14,6 +14,18 @@ const blockchainRoutes = {
                 handler:BlockController.getBlock
             },
             {
+                method:'GET',
+                path:'/stars/address:{address}',
+                handler:BlockController.getStars,
+                options: {
+                    validate: {
+                        params: {
+                            address: Joi.string().min(26).max(35).required()
+                        }
+                    }
+                }
+            },
+            {
                 method:'POST',
                 path:'/block',
                 handler:BlockController.postBlock,

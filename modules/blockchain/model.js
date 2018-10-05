@@ -162,7 +162,7 @@ class Blockchain{
 		});
     }
 
-    // get block
+    // get block based on height
     getBlock(blockHeight) {
 		return new Promise((resolve, reject) => {
 			db.get(blockHeight, function(err, value) {
@@ -173,7 +173,34 @@ class Blockchain{
 				}
 			});
 		});
-    }
+	}
+	
+	//get all stars for a specific wallet address
+	getStars(address) {
+
+		return new Promise((resolve, reject) => {
+
+			let allBlocks = [];
+			this.getBlockHeight()
+			.then(async (height) => {
+
+				for (let i = 0; i < height; i++) {
+
+					let block = await this.getBlock(i);
+					let jsonBlock = JSON.parse(block);
+					console.log(jsonBlock.height);
+					if (jsonBlock.body.address === address) {
+						allBlocks.push(jsonBlock);
+					} 
+				};
+				resolve(allBlocks);
+			})
+			.catch((err) => {
+
+				reject(err);
+			})
+		});
+	}
 
     // validate block
     validateBlock(blockHeight) {
@@ -231,9 +258,6 @@ class Blockchain{
 		return new Promise((resolve, reject) => {
 			let all_validations = [];
 			this.getBlockHeight()
-			.then((height) => {
-				return height;
-			})
 			.then((height) => {
 				for(let i = 0; i < height; i++) {
 					all_validations.push(this.validateBlock(i));

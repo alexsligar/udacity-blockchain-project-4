@@ -27,6 +27,23 @@ exports.getBlock = (req, h) => {
 };
 
 /**
+ * Get all stars based on a wallet address
+ */
+exports.getStars = (req, h) => {
+
+    return Blockchain.getStars(req.params.address)
+    .then((stars) => {
+
+        return stars;
+    })
+    .catch((err) => {
+
+        let data = { err: err.message };
+        return h.response(data).code(404);
+    });
+};
+
+/**
  * Post a new block to the chain
  */
 exports.postBlock = (req, h) => {

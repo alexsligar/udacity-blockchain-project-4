@@ -174,6 +174,32 @@ class Blockchain{
 			});
 		});
 	}
+
+	//get block based on hash
+	getHash(hash) {
+
+		return new Promise((resolve, reject) => {
+
+			this.getBlockHeight()
+			.then(async (height) => {
+
+				for (let i = 0; i < height; i++) {
+
+					let block = await this.getBlock(i);
+					let jsonBlock = JSON.parse(block);
+					if (jsonBlock.hash === hash) {
+						resolve(jsonBlock);
+						return;
+					}
+				};
+				resolve({});
+			})
+			.catch((err) => {
+
+				reject(err);
+			})
+		});
+	}
 	
 	//get all stars for a specific wallet address
 	getStars(address) {
@@ -188,7 +214,6 @@ class Blockchain{
 
 					let block = await this.getBlock(i);
 					let jsonBlock = JSON.parse(block);
-					console.log(jsonBlock.height);
 					if (jsonBlock.body.address === address) {
 						allBlocks.push(jsonBlock);
 					} 

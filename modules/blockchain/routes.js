@@ -26,6 +26,18 @@ const blockchainRoutes = {
                 }
             },
             {
+                method:'GET',
+                path:'/stars/hash:{hash}',
+                handler:BlockController.getHash,
+                options: {
+                    validate: {
+                        params: {
+                            hash: Joi.string().required()
+                        }
+                    }
+                }
+            },
+            {
                 method:'POST',
                 path:'/block',
                 handler:BlockController.postBlock,

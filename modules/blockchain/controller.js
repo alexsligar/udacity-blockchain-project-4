@@ -44,6 +44,23 @@ exports.getStars = (req, h) => {
 };
 
 /**
+ * Get block based on hash
+ */
+exports.getHash = (req, h) => {
+
+    return Blockchain.getHash(req.params.hash)
+    .then((block) => {
+
+        return block;
+    })
+    .catch((err) => {
+
+        let data = { err: err.message };
+        return h.response(data).code(404);
+    });
+};
+
+/**
  * Post a new block to the chain
  */
 exports.postBlock = (req, h) => {

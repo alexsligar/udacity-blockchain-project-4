@@ -107,13 +107,9 @@ class Blockchain{
 	}
 
     // Add new block
-    addBlock(newBlockData){
+    addBlock(address, star){
 		return new Promise((resolve, reject) => {
-            if (!newBlockData || newBlockData === "" || newBlockData === null) {
-                reject("Cannot add empty body to the blockchain");
-                return;
-            }
-            let newBlock = new Block(newBlockData);
+            let newBlock = new Block({address, star});
 	        // Block height
 	        this.getBlockHeight()
 			.then((height) => {

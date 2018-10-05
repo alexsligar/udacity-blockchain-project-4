@@ -5,8 +5,9 @@ const bitcoinMessage = require('bitcoinjs-message');
 /**
  * Interacting with the database
  */
-const level = require('level-mem');
-const db = level();
+const levelup = require('levelup');
+const memdown = require('memdown');
+const db = levelup(memdown());
 
 // Add data to levelDB with key/value pair
 function addLevelDBData(db, key, value) {
@@ -158,6 +159,7 @@ class Validation {
             .then((validationRequest) => {
                 let requestTimestamp = parseInt(validationRequest.requestTimestamp);
                 if (new Date() - new Date(requestTimestamp * 1000) > 300000) {
+                    delLevelDBData(db, address)
                     reject('This request has expired. Please request a new validation message.');
                     return;
                 }
@@ -183,6 +185,55 @@ class Validation {
                 } else {
                     reject(err);
                 }
+            })
+        });
+    }
+
+    checkEligible(address) {
+
+        return new Promise((resolve, reject) => {
+
+            this.checkAddress(address)
+            .then((value) => {
+
+                let validation = JSON.parse(value);
+                if (!('registerStar' in validation)) {
+                    reject('A valid signature must first be signed');
+                    return;
+                }
+                return validation;
+            })
+            .then((validation) => {
+
+                let requestTimestamp = parseInt(validation.status.requestTimestamp);
+                if (new Date() - new Date(requestTimestamp * 1000) > 300000) {
+                    reject('This request has expired. Please request a new validation message.');
+                    return;
+                }
+                resolve();
+            })
+            .catch((err) => {
+                if (err.name === 'NotFoundError') {
+                    reject('A validation request was not found for this address.');
+                } else {
+                    reject(err);
+                }
+            })
+        });
+    }
+
+    removeValidation(address) {
+
+        return new Promise((resolve, reject) => {
+
+            delLevelDBData(db, address)
+            .then(() => {
+
+                resolve()
+            })
+            .catch((err) => {
+                
+                reject(err);
             })
         });
     }

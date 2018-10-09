@@ -1,5 +1,7 @@
+'use strict';
+
 // Add data to levelDB with key/value pair
-function addLevelDBData(db, key, value) {
+const addLevelDBData = (db, key, value) => {
 	return new Promise((resolve, reject) => {
 		db.put(key, value, function(err) {
             if (err) {
@@ -9,10 +11,10 @@ function addLevelDBData(db, key, value) {
             }
 	    });
 	});
-}
+};
 
 // Add data to levelDB with value
-function addDataToLevelDB(db, value) {
+const addDataToLevelDB = (db, value) => {
 	return new Promise((resolve, reject) => {
 		let i = 0;
 	  db.createReadStream()
@@ -32,9 +34,9 @@ function addDataToLevelDB(db, value) {
 				});
 	   });
 	});
-}
+};
 
-function getLevelDBData(db, key) {
+const getLevelDBData = (db, key) => {
     return new Promise((resolve, reject) => {
         db.get(key, function(err, value) {
             if (value) {
@@ -44,4 +46,21 @@ function getLevelDBData(db, key) {
             }
         });
     });
-}
+};
+
+const delLevelDBData = (db, key) => {
+    return new Promise((resolve, reject) => {
+        db.del(key, function(err) {
+            if (err) {
+                reject(err);
+            } 
+            else {
+                resolve();
+            }
+        });
+    });
+};
+
+const Database = { addLevelDBData, addDataToLevelDB, getLevelDBData, delLevelDBData };
+
+export default Database;

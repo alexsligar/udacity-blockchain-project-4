@@ -8,67 +8,7 @@ const bitcoinMessage = require('bitcoinjs-message');
 const levelup = require('levelup');
 const memdown = require('memdown');
 const db = levelup(memdown());
-
-// Add data to levelDB with key/value pair
-function addLevelDBData(db, key, value) {
-	return new Promise((resolve, reject) => {
-		db.put(key, value, function(err) {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(key);
-            }
-	    });
-	});
-}
-
-// Add data to levelDB with value
-function addDataToLevelDB(db, value) {
-	return new Promise((resolve, reject) => {
-		let i = 0;
-	    db.createReadStream()
-		.on('data', function(data) {
-	  	    i++;
-	    })
-		.on('error', function(err) {
-			reject(err);
-	    })
-		.on('close', function() {
-	   		addLevelDBData(i, value)
-            .then((key) => {
-                resolve(key);
-            })
-            .catch((error) => {
-                reject(error);
-            });
-	    });
-	});
-}
-
-function getLevelDBData(db, key) {
-    return new Promise((resolve, reject) => {
-        db.get(key, function(err, value) {
-            if (value) {
-                resolve(value);
-            } else {
-                reject(err);
-            }
-        });
-    });
-}
-
-function delLevelDBData(db, key) {
-    return new Promise((resolve, reject) => {
-        db.del(key, function(err) {
-            if (err) {
-                reject(err);
-            } 
-            else {
-                resolve();
-            }
-        });
-    });
-}
+const Database = require('../../config/database');
 
 /**
  * Validation class
@@ -94,7 +34,7 @@ class ValidatedRequest {
 class Validation {
     checkAddress(address) {
         return new Promise((resolve, reject) => {
-            getLevelDBData(db, address)
+            Database.getLevelDBData(db, address)
             .then((value) => {
                 resolve(value);
             })
@@ -122,18 +62,18 @@ class Validation {
                 if (new Date() - new Date(requestTimestamp * 1000) > 300000) {
                     //create new request and add it in place of old one
                     let newValidationRequest = new ValidationRequest(address);
-                    addLevelDBData(db, address, JSON.stringify(newValidationRequest).toString());
+                    Database.addLevelDBData(db, address, JSON.stringify(newValidationRequest).toString());
                     resolve(newValidationRequest);
                 } else {
                     validationRequest.validationWindow = Math.round(300 - (new Date() - new Date(requestTimestamp * 1000)) / 1000);
-                    addLevelDBData(db, address, JSON.stringify(validationRequest).toString());                    
+                    Database.addLevelDBData(db, address, JSON.stringify(validationRequest).toString());                    
                     resolve(validationRequest);
                 }
             })
             .catch((err) => {
                 if (err.name === 'NotFoundError') {
                     let newValidation = new ValidationRequest(address);
-                    addLevelDBData(db, address, JSON.stringify(newValidation).toString());
+                    Database.addLevelDBData(db, address, JSON.stringify(newValidation).toString());
                     resolve(newValidation);
                 } else {
                     reject(err);
@@ -159,7 +99,7 @@ class Validation {
             .then((validationRequest) => {
                 let requestTimestamp = parseInt(validationRequest.requestTimestamp);
                 if (new Date() - new Date(requestTimestamp * 1000) > 300000) {
-                    delLevelDBData(db, address)
+                    Database.delLevelDBData(db, address)
                     reject('This request has expired. Please request a new validation message.');
                     return;
                 }
@@ -176,7 +116,7 @@ class Validation {
             .then((validatedRequest) => {
                 let requestTimestamp = parseInt(validatedRequest.status.requestTimestamp);
                 validatedRequest.status.validationWindow = Math.round(300 - (new Date() - new Date(requestTimestamp * 1000)) / 1000);
-                addLevelDBData(db, address, JSON.stringify(validatedRequest).toString());
+                Database.addLevelDBData(db, address, JSON.stringify(validatedRequest).toString());
                 resolve(validatedRequest);
             })
             .catch((err) => {
@@ -226,7 +166,7 @@ class Validation {
 
         return new Promise((resolve, reject) => {
 
-            delLevelDBData(db, address)
+            Database.delLevelDBData(db, address)
             .then(() => {
 
                 resolve()

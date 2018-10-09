@@ -1,3 +1,5 @@
+'use strict';
+
 /* ===== SHA256 with Crypto-js ===============================
 |  Learn more: Crypto-js: https://github.com/brix/crypto-js  |
 |  =========================================================*/
@@ -11,43 +13,8 @@ const SHA256 = require('crypto-js/sha256');
 
 const level = require('level');
 const chainDB = './chaindata';
+const Database = '../../config/database';
 const db = level(chainDB);
-
-// Add data to levelDB with key/value pair
-function addLevelDBData(key,value) {
-	return new Promise((resolve, reject) => {
-		db.put(key, value, function(err) {
-	    if (err) {
-			reject(err);
-		} else {
-			resolve(key);
-		}
-	  });
-	});
-}
-
-// Add data to levelDB with value
-function addDataToLevelDB(value) {
-	return new Promise((resolve, reject) => {
-		let i = 0;
-	  db.createReadStream()
-		.on('data', function(data) {
-	  	i++;
-	   })
-		 .on('error', function(err) {
-			 reject(err);
-	   })
-		 .on('close', function() {
-	   		addLevelDBData(i, value)
-				.then((key) => {
-					resolve(key);
-				})
-				.catch((error) => {
-					reject(error);
-				});
-	   });
-	});
-}
 
 /* ===== Block Class ==============================
 |  Class with a constructor for block 			   |
@@ -96,7 +63,7 @@ class Blockchain{
             let genesisBlock = new Block('Genesis Block');
             genesisBlock.time = new Date().getTime().toString().slice(0,-3);
             genesisBlock.hash = SHA256(JSON.stringify(genesisBlock)).toString();
-            addDataToLevelDB(JSON.stringify(genesisBlock).toString())
+            Database.addDataToLevelDB(JSON.stringify(genesisBlock).toString())
             .then((key) => {
                 resolve(key);
             })
@@ -129,7 +96,7 @@ class Blockchain{
 				// Block hash with SHA256 using newBlock and converting to a string
 		        newBlock.hash = SHA256(JSON.stringify(newBlock)).toString();
 		        // Adding block object to chain
-		  	    return addDataToLevelDB(JSON.stringify(newBlock).toString())
+		  	    return Database.addDataToLevelDB(JSON.stringify(newBlock).toString())
 			})
 			.then((key) => {
                 //retreive new block

@@ -7,17 +7,15 @@ const Validation = require('./model');
  */
 exports.post = (req, h) => {
 
-    return Validation.addRequest(req.payload.address)
+    return Validation.addValidationRequest(req.payload.address)
     .then((validationRequest) => {
 
         return h.response(validationRequest).code(201);
-
     })
     .catch((err) => {
 
-        let data =  { err: err };
+        let data =  { err: err.message };
         return h.response(data).code(400);
-
     });
 
 };

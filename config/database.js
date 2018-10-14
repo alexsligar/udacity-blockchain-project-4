@@ -61,6 +61,25 @@ const delLevelDBData = (db, key) => {
     });
 };
 
-const Database = { addLevelDBData, addDataToLevelDB, getLevelDBData, delLevelDBData };
+const getLevelDBHeight = (db) => {
+
+    return new Promise((resolve, reject) => {
+
+        let height = 0;
+        db.createReadStream()
+        .on('data', (data) => {
+            height++;
+        })
+        .on('error', (err) => {
+            reject(err);
+        })
+        .on('close', () => {
+            resolve(height);
+        });
+    });
+
+}
+
+const Database = { addLevelDBData, addDataToLevelDB, getLevelDBData, delLevelDBData, getLevelDBHeight };
 
 module.exports = Database;

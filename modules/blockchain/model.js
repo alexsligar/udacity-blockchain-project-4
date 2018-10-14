@@ -151,7 +151,7 @@ class Blockchain{
 						return;
 					}
 				};
-				resolve({});
+				throw Error('Hash not found in blockchain.')
 			})
 			.catch((err) => {
 

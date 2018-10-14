@@ -65,6 +65,7 @@ exports.getHash = (req, h) => {
  */
 exports.postBlock = (req, h) => {
 
+    //check that the address is eligible to add a star
     return Validation.checkEligible(req.payload.address)
     .then(() => {
 
@@ -73,14 +74,13 @@ exports.postBlock = (req, h) => {
     .then(async (block) => {
 
         const address = JSON.parse(block).body.address;
+        //make sure a second star can't be added on the request
         await Validation.removeValidation(address);
-
         return h.response(JSON.parse(block)).code(201);
 
     })
     .catch((err) => {
 
-        console.log(err);
         let data =  { err: err };
         return h.response(data).code(400);
 

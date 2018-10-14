@@ -32,6 +32,34 @@ class ValidatedRequest {
 
 
 class Validation {
+    expired(validationRequest) {
+        let timestamp;
+        //obtain timestamp based on whether validation has been validated
+        if ('status' in validationRequest) {
+            timestamp = validationRequest.status.requestTimestamp;
+        } else {
+            timestamp = validationRequest.requestTimestamp;
+        }
+        //check if validationWindown has expired
+        timestamp = parseInt(timestamp);
+        return (new Date() - new Date(timestamp * 1000) > 300000);
+    }
+
+    updateValidationWindow(validationRequest) {
+        if ('status' in validationRequest) {
+            let timestamp = parseInt(validationRequest.status.requestTimestamp);
+            validationRequest.status.validationWindow = (
+                Math.ceil(300 - (new Date() - new Date(timestamp * 1000)) / 1000)
+            );
+        } else {
+            let timestamp = parseInt(validationRequest.requestTimestamp);
+            validationRequest.validationWindow = (
+                Math.ceil(300 - (new Date() - new Date(timestamp * 1000)) / 1000)
+            );
+        }
+        return validationRequest;
+    }
+
     checkAddress(address) {
         return new Promise((resolve, reject) => {
             Database.getLevelDBData(db, address)
@@ -43,66 +71,72 @@ class Validation {
             })
         });
     }
-    
+
     addRequest(address) {
         return new Promise((resolve, reject) => {
-            //check if address already has request
+            let newValidation = new ValidationRequest(address);
+            Database.addLevelDBData(db, address, JSON.stringify(newValidation).toString())
+            .then((key) => {
+                resolve(newValidation);
+            })
+            .catch((err) => {
+                reject(err);
+            })
+            
+        })
+    }
+
+    addValidationRequest(address) {
+        return new Promise((resolve, reject) => {
             this.checkAddress(address)
-            .then((value) => {
-                //check if it has been more than 300 seconds
-                let validationRequest = JSON.parse(value);
-                if ('status' in validationRequest) {
-                    reject('A validated message is active for this address. Please register a star.')
+            .then(JSON.parse)
+            .then((validationRequest) => {
+                let expired = this.expired(validationRequest);
+                if (!expired) {
+                    resolve(this.updateValidationWindow(validationRequest));
                     return;
                 }
-                return validationRequest;
+                return this.addRequest(address);
             })
-            .then((validationRequest) => {
-                let requestTimestamp = parseInt(validationRequest.requestTimestamp);
-                if (new Date() - new Date(requestTimestamp * 1000) > 300000) {
-                    //create new request and add it in place of old one
-                    let newValidationRequest = new ValidationRequest(address);
-                    Database.addLevelDBData(db, address, JSON.stringify(newValidationRequest).toString());
-                    resolve(newValidationRequest);
-                } else {
-                    validationRequest.validationWindow = Math.round(300 - (new Date() - new Date(requestTimestamp * 1000)) / 1000);
-                    Database.addLevelDBData(db, address, JSON.stringify(validationRequest).toString());                    
-                    resolve(validationRequest);
-                }
+            .then((newValidation) => {
+                resolve(newValidation);
+                return;
             })
             .catch((err) => {
                 if (err.name === 'NotFoundError') {
-                    let newValidation = new ValidationRequest(address);
-                    Database.addLevelDBData(db, address, JSON.stringify(newValidation).toString());
-                    resolve(newValidation);
-                } else {
+                    this.addRequest(address)
+                    .then((newValidation) => {
+                        resolve(newValidation);
+                    })
+                    .catch((err) => {
+                        reject(err);
+                    })
+                }
+                else {
                     reject(err);
                 }
-            });
+            })
         });
     }
 
     validateRequest(address, signature) {
         return new Promise((resolve, reject) => {
             this.checkAddress(address)
-            .then((value) => {
-                let validationRequest = JSON.parse(value);
-                if ('status' in validationRequest) {
-                    validationRequest.message = 'A request has already been validated. Please register a star.';
-                    let requestTimestamp = parseInt(validationRequest.status.requestTimestamp);
-                    validationRequest.status.validationWindow = Math.round(300 - (new Date() - new Date(requestTimestamp * 1000)) / 1000);
-                    resolve(validationRequest);
-                    return;
-                } 
-                return validationRequest;
-            })
+            .then(JSON.parse)
             .then((validationRequest) => {
-                let requestTimestamp = parseInt(validationRequest.requestTimestamp);
-                if (new Date() - new Date(requestTimestamp * 1000) > 300000) {
-                    Database.delLevelDBData(db, address)
+                if (this.expired(validationRequest)) {
+                    Database.delLevelDBData(db, address);
                     reject('This request has expired. Please request a new validation message.');
                     return;
                 }
+                return validationRequest;
+            })
+            .then((validationRequest) => {
+                if ('status' in validationRequest) {
+                    validationRequest.message = 'A request has already been validated. Please register a star.';
+                    resolve(this.updateValidationWindow(validationRequest));
+                    return;
+                } 
                 return validationRequest;
             })
             .then((validationRequest) => {
@@ -114,9 +148,12 @@ class Validation {
                 return new ValidatedRequest(validationRequest);
             })
             .then((validatedRequest) => {
-                let requestTimestamp = parseInt(validatedRequest.status.requestTimestamp);
-                validatedRequest.status.validationWindow = Math.round(300 - (new Date() - new Date(requestTimestamp * 1000)) / 1000);
-                Database.addLevelDBData(db, address, JSON.stringify(validatedRequest).toString());
+                return Database.addLevelDBData(db, address, JSON.stringify(validatedRequest).toString());
+            })
+            .then(JSON.parse)
+            .then(this.updateValidationWindow)
+            .then((validatedRequest) => {
+
                 resolve(validatedRequest);
             })
             .catch((err) => {
@@ -134,9 +171,9 @@ class Validation {
         return new Promise((resolve, reject) => {
 
             this.checkAddress(address)
-            .then((value) => {
+            .then(JSON.parse)
+            .then((validation) => {
 
-                let validation = JSON.parse(value);
                 if (!('registerStar' in validation)) {
                     reject('A valid signature must first be signed');
                     return;
@@ -145,35 +182,20 @@ class Validation {
             })
             .then((validation) => {
 
-                let requestTimestamp = parseInt(validation.status.requestTimestamp);
-                if (new Date() - new Date(requestTimestamp * 1000) > 300000) {
+                if (this.expired(validation)) {
                     reject('This request has expired. Please request a new validation message.');
                     return;
                 }
                 resolve();
             })
             .catch((err) => {
+
                 if (err.name === 'NotFoundError') {
                     reject('A validation request was not found for this address.');
-                } else {
+                }
+                else {
                     reject(err);
                 }
-            })
-        });
-    }
-
-    removeValidation(address) {
-
-        return new Promise((resolve, reject) => {
-
-            Database.delLevelDBData(db, address)
-            .then(() => {
-
-                resolve()
-            })
-            .catch((err) => {
-                
-                reject(err);
             })
         });
     }

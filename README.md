@@ -192,7 +192,7 @@ http://localhost:8000/stars/address:[address]
   }
 ]
 ```
-404 Not Found: If the wallet address was invalid
+400 Bad Request: If the wallet address was invalid
 
 ## Built With
 This project was built using [HapiJs](https://hapijs.com/).

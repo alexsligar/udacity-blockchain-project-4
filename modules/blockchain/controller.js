@@ -13,7 +13,7 @@ exports.getBlock = (req, h) => {
     .then((block) => {
 
 
-        return JSON.parse(block);
+        return block;
 
 
     })

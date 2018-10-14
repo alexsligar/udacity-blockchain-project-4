@@ -39,7 +39,7 @@ exports.getStars = (req, h) => {
     .catch((err) => {
 
         let data = { err: err.message };
-        return h.response(data).code(404);
+        return h.response(data).code(400);
     });
 };
 

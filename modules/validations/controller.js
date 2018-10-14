@@ -14,7 +14,7 @@ exports.post = (req, h) => {
     })
     .catch((err) => {
 
-        let data =  { err: err.message };
+        let data =  { err: err };
         return h.response(data).code(400);
     });
 

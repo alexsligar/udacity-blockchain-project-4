@@ -12,7 +12,7 @@ const SHA256 = require('crypto-js/sha256');
 |  ===============================================*/
 
 const level = require('level');
-const chainDB = '../../chaindata';
+const chainDB = './chaindata';
 const Database = require('../../config/database');
 const db = level(chainDB);
 
@@ -24,10 +24,18 @@ class Block{
 	constructor(data) {
   	    this.hash = "",
         this.height = 0,
-        this.body = data,
+        this.body = this.encodeStarStory(data),
         this.time = 0,
         this.previousBlockHash = ""
-    }
+	}
+	
+	encodeStarStory(data) {
+
+		if (data.star && 'story' in data.star) {
+			data.star.story = new Buffer(data.star.story).toString('hex');
+		}
+		return data;
+	}
 }
 
 /* ===== Blockchain Class ==========================
@@ -39,7 +47,7 @@ class Blockchain{
 	//Check if blockchain exists or add new genesis block
 	getChain() {
         return new Promise((resolve,reject) => {
-            this.getBlockHeight()
+            Database.getLevelDBHeight(db)
             .then((height) => {
                 if(height > 0) {
                     resolve(true);
@@ -60,7 +68,7 @@ class Blockchain{
 	//add genesis block to a new blockchain
 	addGenesisBlock() {
         return new Promise((resolve, reject) => {
-            let genesisBlock = new Block('Genesis Block');
+			let genesisBlock = new Block('Genesis Block');
             genesisBlock.time = new Date().getTime().toString().slice(0,-3);
             genesisBlock.hash = SHA256(JSON.stringify(genesisBlock)).toString();
             Database.addDataToLevelDB(db, JSON.stringify(genesisBlock).toString())
@@ -78,7 +86,7 @@ class Blockchain{
 		return new Promise((resolve, reject) => {
             let newBlock = new Block({address, star});
 	        // Block height
-	        this.getBlockHeight()
+	        Database.getLevelDBHeight(db)
 			.then((height) => {
 				//check if genesis block exists before adding new block
 				if (height === 0) {
@@ -96,35 +104,14 @@ class Blockchain{
 				// Block hash with SHA256 using newBlock and converting to a string
 		        newBlock.hash = SHA256(JSON.stringify(newBlock)).toString();
 		        // Adding block object to chain
-		  	    return Database.addDataToLevelDB(JSON.stringify(newBlock).toString())
+		  	    return Database.addDataToLevelDB(db, JSON.stringify(newBlock).toString())
 			})
-			.then((key) => {
-                //retreive new block
-                return this.getBlock(key);
-            })
             .then((block) => {
                 // return new block to caller
                 resolve(block);
             })
 			.catch((err) => {
 				reject(err);
-			});
-		});
-    }
-
-    // Get block height
-    getBlockHeight() {
-		return new Promise((resolve, reject) => {
-			let height = 0;
-			db.createReadStream()
-			.on('data', (data) => {
-				height++;
-			})
-			.on('error', (err) => {
-                reject(err);
-			})
-			.on('close', () => {
-				resolve(height);
 			});
 		});
     }
@@ -147,7 +134,7 @@ class Blockchain{
 
 		return new Promise((resolve, reject) => {
 
-			this.getBlockHeight()
+			Database.getLevelDBHeight(db)
 			.then(async (height) => {
 
 				for (let i = 0; i < height; i++) {
@@ -174,7 +161,7 @@ class Blockchain{
 		return new Promise((resolve, reject) => {
 
 			let allBlocks = [];
-			this.getBlockHeight()
+			Database.getLevelDBHeight(db)
 			.then(async (height) => {
 
 				for (let i = 0; i < height; i++) {
@@ -249,7 +236,7 @@ class Blockchain{
 	validateChain() {
 		return new Promise((resolve, reject) => {
 			let all_validations = [];
-			this.getBlockHeight()
+			Database.getLevelDBHeight(db)
 			.then((height) => {
 				for(let i = 0; i < height; i++) {
 					all_validations.push(this.validateBlock(i));

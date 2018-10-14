@@ -257,6 +257,23 @@ class Validation {
             })
         });
     }
+
+    //remove a validation from db based on address
+    removeValidation(address) {
+
+        return new Promise((resolve, reject) => {
+
+            Database.delLevelDBData(db, address)
+            .then(() => {
+
+                resolve()
+            })
+            .catch((err) => {
+                
+                reject(err);
+            })
+        });
+    }
 }
 
 const validations = module.exports = new Validation;

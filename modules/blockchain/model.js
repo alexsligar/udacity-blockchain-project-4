@@ -12,8 +12,8 @@ const SHA256 = require('crypto-js/sha256');
 |  ===============================================*/
 
 const level = require('level');
-const chainDB = './chaindata';
-const Database = '../../config/database';
+const chainDB = '../../chaindata';
+const Database = require('../../config/database');
 const db = level(chainDB);
 
 /* ===== Block Class ==============================
@@ -63,11 +63,11 @@ class Blockchain{
             let genesisBlock = new Block('Genesis Block');
             genesisBlock.time = new Date().getTime().toString().slice(0,-3);
             genesisBlock.hash = SHA256(JSON.stringify(genesisBlock)).toString();
-            Database.addDataToLevelDB(JSON.stringify(genesisBlock).toString())
+            Database.addDataToLevelDB(db, JSON.stringify(genesisBlock).toString())
             .then((key) => {
                 resolve(key);
             })
-            .catch((error) => {
+            .catch((err) => {
                 reject(err);
             });
         });

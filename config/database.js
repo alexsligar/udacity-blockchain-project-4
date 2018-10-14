@@ -7,7 +7,7 @@ const addLevelDBData = (db, key, value) => {
             if (err) {
                 reject(err);
             } else {
-                resolve(key);
+                resolve(value);
             }
 	    });
 	});
@@ -25,7 +25,7 @@ const addDataToLevelDB = (db, value) => {
 			 reject(err);
 	   })
 		 .on('close', function() {
-	   		addLevelDBData(i, value)
+	   		addLevelDBData(db, i, value)
 				.then((key) => {
 					resolve(key);
 				})
@@ -63,4 +63,4 @@ const delLevelDBData = (db, key) => {
 
 const Database = { addLevelDBData, addDataToLevelDB, getLevelDBData, delLevelDBData };
 
-export default Database;
+module.exports = Database;

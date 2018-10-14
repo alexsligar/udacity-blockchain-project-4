@@ -135,7 +135,7 @@ class Validation {
                 return this.addRequest(address);
             })
             .then((newValidation) => {
-                
+
                 resolve(newValidation);
                 return;
             })
@@ -160,7 +160,9 @@ class Validation {
 
     //validate a message based on the address and signature provided
     validateRequest(address, signature) {
+
         return new Promise((resolve, reject) => {
+            
             //check if a request is in db for the address
             this.checkAddress(address)
             .then(JSON.parse)

@@ -94,7 +94,7 @@ class Blockchain{
 					height++;
 				}
 				newBlock.height = height;
-				return this.getBlock(height - 1);
+				return Database.getLevelDBData(db, height - 1);
 			})
 			.then((previousBlock) => {
 				//user previousBlock to set previousBlockHash
@@ -119,13 +119,19 @@ class Blockchain{
     // get block based on height
     getBlock(blockHeight) {
 		return new Promise((resolve, reject) => {
-			db.get(blockHeight, function(err, value) {
-				if (value) {
-					resolve(value);
-				} else {
-                    reject(err);
+			Database.getLevelDBData(db, blockHeight)
+			.then(JSON.parse)
+			.then((block) => {
+
+				if (block.body && block.body.star && 'story' in block.body.star) {
+					block.body.star.storyDecoded = Buffer.from(block.body.star.story, 'hex').toString();
 				}
-			});
+				resolve(block);
+			})
+			.catch((err) => {
+
+				reject(err);
+			})
 		});
 	}
 
@@ -140,9 +146,8 @@ class Blockchain{
 				for (let i = 0; i < height; i++) {
 
 					let block = await this.getBlock(i);
-					let jsonBlock = JSON.parse(block);
-					if (jsonBlock.hash === hash) {
-						resolve(jsonBlock);
+					if (block.hash === hash) {
+						resolve(block);
 						return;
 					}
 				};
@@ -167,9 +172,8 @@ class Blockchain{
 				for (let i = 0; i < height; i++) {
 
 					let block = await this.getBlock(i);
-					let jsonBlock = JSON.parse(block);
-					if (jsonBlock.body.address === address) {
-						allBlocks.push(jsonBlock);
+					if (block.body && block.body.address && block.body.address === address) {
+						allBlocks.push(block);
 					} 
 				};
 				resolve(allBlocks);
@@ -186,7 +190,7 @@ class Blockchain{
 
 		return new Promise((resolve, reject) => {
 			// get block object
-			this.getBlock(blockHeight)
+			Database.getLevelDBData(db, blockHeight)
 			.then((blockRaw) => {
 				let block = JSON.parse(blockRaw);
 				// get block hash
@@ -214,8 +218,8 @@ class Blockchain{
 	validateBlockLink(blockHeight) {
 		return new Promise((resolve, reject) => {
 			let gatherBlocks = [];
-			gatherBlocks.push(this.getBlock(blockHeight));
-			gatherBlocks.push(this.getBlock(blockHeight + 1));
+			gatherBlocks.push(Database.getLevelDBData(db, blockHeight));
+			gatherBlocks.push(Database.getLevelDBData(db, blockHeight + 1));
 			Promise.all(gatherBlocks)
 			.then((blocks) => {
 				let firstBlockHash = JSON.parse(blocks[0]).hash;
